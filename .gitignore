@@ -1,0 +1,13 @@
+# Regenerated locally on first use -- never pre-shipped, even for our own default truth
+spectra_reference/
+
+# Regenerated output, not a shipped deliverable
+figures/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store

@@ -1,0 +1,61 @@
+{
+  "name": "example_grib_model",
+  "forecast_dir": "/data/projects/77010001/ccrs_dwr/nwp/arun/intern_zaloy/pangu_folder/pangu_forcasts",
+  "filename_template": "merged_{date}_{hour}-out-{lead}.grib",
+  "precip_forecast_dir": "/data/projects/77010001/ccrs_dwr/nwp/wjang/derive_precip_testing/derived/pangu_mlp_full",
+  "precip_forecast_filename_template": "derived_{date}_{hour}-out-{lead}.nc",
+  "precip_var": "precip_derived",
+  "precip_unit_scale": 1.0,
+  "pl_truth": {
+    "dir": "/data/projects/77010001/ccrs_dwr/nwp/arun/intern_zaloy/era5_reanalysis/era5_2024to2025/era5_pl_splits_6hr_final",
+    "variables": {
+      "z": {
+        "name": "z",
+        "unit": "geopotential"
+      },
+      "t": {
+        "name": "t",
+        "unit": "K"
+      },
+      "q": {
+        "name": "q",
+        "unit": "kg/kg"
+      },
+      "u": {
+        "name": "u",
+        "unit": "m/s"
+      },
+      "v": {
+        "name": "v",
+        "unit": "m/s"
+      }
+    }
+  },
+  "sfc_truth": {
+    "dir": "/data/projects/77010001/ccrs_dwr/nwp/arun/intern_zaloy/era5_reanalysis/era5_2024to2025/era5_sfc_splits_6hr_regridded",
+    "t2m_dir": "/data/projects/77010001/ccrs_dwr/nwp/arun/intern_zaloy/era5_reanalysis/era5_2024to2025/era5_sfc_splits_6hr_t2m_regridded",
+    "variables": {
+      "u10": {
+        "name": "u10",
+        "unit": "m/s"
+      },
+      "v10": {
+        "name": "v10",
+        "unit": "m/s"
+      },
+      "t2m": {
+        "name": "t2m",
+        "unit": "K"
+      }
+    }
+  },
+  "precip_truth": {
+    "dir": "/data/projects/77010001/ccrs_dwr/nwp/wjang/gpm_unified",
+    "variables": {
+      "precip": {
+        "name": "precipitation",
+        "unit": "mm"
+      }
+    }
+  }
+}
