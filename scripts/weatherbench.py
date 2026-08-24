@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
 """
 weatherbench.py -- single-script WeatherBench (Traditional / Dynamic / Combined).
 
-BUILD STATUS: Traditional and Dynamic modes complete (precomputed + live
-add-your-own-model, including per-lead HKE spectra and GPM-based precip
-FSS). Combined mode not yet implemented.
+BUILD STATUS: All three modes complete (precomputed + live add-your-own-model,
+including per-lead HKE spectra and GPM-based precip FSS).
 
 Usage:
   python weatherbench.py --mode traditional --period full_year
   python weatherbench.py --mode dynamic --period 12cases --add_model_config mymodel.json
+  python weatherbench.py --mode combined --period full_year --add_model_config mymodel.json
 
 Adding your own model requires a JSON config. There is no default truth
 source -- every truth type your requested metrics need must be explicitly
@@ -25,12 +24,17 @@ mymodel.json fields ("name" and "forecast_dir" are always required;
 pl_truth/sfc_truth/precip_truth are each required only if you request a
 mode/metric that needs them -- pl_truth for traditional, dynamic, and
 spectra; sfc_truth for dynamic's surface_temperature_energy; precip_truth
-for dynamic's precip column):
+for dynamic's precip column. truth_source_label/precip_truth_source_label
+are optional display strings shown in each row's label on Dynamic/Combined
+figures -- e.g. "ModelName (ERA5 / GPM)" -- and default to "ERA5"/"GPM" if
+omitted):
   {
     "name": "mymodel",
     "forecast_dir": "/path/to/forecasts",
     "filename_template": "mymodel_{date}_{hour}-out-{lead}.grib",
     "pressure_dim": "isobaricInhPa",
+    "truth_source_label": "ERA5",
+    "precip_truth_source_label": "GPM",
     "pl_truth": {
       "dir": "/path/to/your/pl/truth",
       "variables": {
@@ -77,6 +81,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.patches import Rectangle, Patch
+import math
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -88,6 +93,8 @@ FIG_DIR = REPO / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 
 PRECOMPUTED_MODELS = ["pangu", "fourcastnet", "aifs", "graphcast", "aurora"]
+PRECOMPUTED_TRUTH_LABEL = "ERA5"
+PRECOMPUTED_PRECIP_TRUTH_LABEL = "GPM"
 MODEL_DISPLAY = {"pangu": "PanguWeather", "fourcastnet": "FourcastNet", "aifs": "AIFS",
                   "graphcast": "Graphcast", "aurora": "Aurora"}
 
@@ -123,6 +130,14 @@ UNIT_CONVERSIONS = {
     ("m_precip", "mm"): lambda x: x * 1000.0,
     ("kg/m2", "mm"): lambda x: x,
 }
+
+def get_truth_labels(model_key, add_configs):
+    if model_key in PRECOMPUTED_MODELS:
+        return PRECOMPUTED_TRUTH_LABEL, PRECOMPUTED_PRECIP_TRUTH_LABEL
+    cfg = add_configs.get(model_key)
+    if cfg is not None:
+        return cfg.truth_source_label, cfg.precip_truth_source_label
+    return PRECOMPUTED_TRUTH_LABEL, PRECOMPUTED_PRECIP_TRUTH_LABEL
 
 def convert_units(arr, from_unit, to_unit):
     if from_unit is None or from_unit == to_unit:
@@ -209,6 +224,8 @@ class ModelConfig:
     precip_unit_scale: float = 1000.0
     precip_forecast_dir: str = None
     precip_forecast_filename_template: str = None
+    truth_source_label: str = "ERA5"
+    precip_truth_source_label: str = "GPM"
     pl_truth: TruthSpec = None
     sfc_truth: TruthSpec = None
     precip_truth: TruthSpec = None
@@ -606,7 +623,8 @@ def plot_traditional(model_keys, add_configs, period, outname):
             else:
                 ax.tick_params(axis="x", bottom=False, labelbottom=False)
             ax.set_yticks([]); ax.set_xlim(0, len(LEADS)); ax.set_ylim(0, 1)
-        display = MODEL_DISPLAY.get(m, m)
+        pl_sfc_label, _ = get_truth_labels(m, add_configs)
+        display = f"{MODEL_DISPLAY.get(m, m)}\n({pl_sfc_label})"
         axes[i, 0].set_ylabel(display, rotation=0, ha="right", va="center", fontsize=10, labelpad=20)
 
     legend_handles = [Patch(edgecolor="green", facecolor="none", linewidth=1.5, label="Best"),
@@ -920,7 +938,17 @@ from scores.spatial import fss_2d_single_field
 
 PRECIP_DOMAIN = {"lat_min": -12, "lat_max": 23, "lon_min": 92, "lon_max": 127}
 PRECIP_THRESHOLDS = [5, 10, 20, 50]
-PRECIP_WINDOWS = [2, 5, 10, 20]
+KM_PER_DEGREE = 111.2
+DEFAULT_PRECIP_WINDOWS_GRIDPTS = [2, 5, 10, 20]
+DEFAULT_PRECIP_RESOLUTION_DEG = 0.25
+
+def km_to_gridpoints(km, grid_spacing_deg):
+    km_per_gridpt = KM_PER_DEGREE * grid_spacing_deg
+    return int(math.floor(km / km_per_gridpt + 0.5))
+
+def get_precip_windows_for_resolution(grid_spacing_deg):
+    window_km_values = [w * DEFAULT_PRECIP_RESOLUTION_DEG * KM_PER_DEGREE for w in DEFAULT_PRECIP_WINDOWS_GRIDPTS]
+    return [km_to_gridpoints(km, grid_spacing_deg) for km in window_km_values]
 PRECIP_LEAD_TIMES = [6, 12, 18, 24, 30, 36, 42, 48]
 TWELVE_CASE_DATES_PRECIP = {pd.Timestamp(f"{d.split('_')[0]} {d.split('_')[1]}:00") for d in [
     '2024-01-24_12','2024-02-06_12','2024-03-06_12','2024-04-12_06',
@@ -938,9 +966,10 @@ def load_precip_truth(fpath, precip_truth):
     ds = ds.sel({lat_name: slice(PRECIP_DOMAIN["lat_min"], PRECIP_DOMAIN["lat_max"]),
                  lon_name: slice(PRECIP_DOMAIN["lon_min"], PRECIP_DOMAIN["lon_max"])})
     ds = ds.sortby(lat_name, ascending=False)
-    return get_truth_var(ds, "precip", precip_truth)
+    arr = get_truth_var(ds, "precip", precip_truth)
+    return arr, ds[lat_name].values, ds[lon_name].values
 
-def load_precip_forecast(fpath, config):
+def load_precip_forecast(fpath, config, target_lat=None, target_lon=None):
     if Path(fpath).suffix == ".grib":
         ds = xr.open_dataset(str(fpath), engine="cfgrib", backend_kwargs={"indexpath": ""})
     else:
@@ -948,8 +977,11 @@ def load_precip_forecast(fpath, config):
     lat_name = "latitude" if "latitude" in ds.coords else "lat"
     lon_name = "longitude" if "longitude" in ds.coords else "lon"
     ds = ds.sortby(lat_name).sortby(lon_name)
-    ds = ds.sel({lat_name: slice(PRECIP_DOMAIN["lat_min"], PRECIP_DOMAIN["lat_max"]),
-                 lon_name: slice(PRECIP_DOMAIN["lon_min"], PRECIP_DOMAIN["lon_max"])})
+    if target_lat is not None and target_lon is not None:
+        ds = ds.interp({lat_name: target_lat, lon_name: target_lon}, method="linear")
+    else:
+        ds = ds.sel({lat_name: slice(PRECIP_DOMAIN["lat_min"], PRECIP_DOMAIN["lat_max"]),
+                     lon_name: slice(PRECIP_DOMAIN["lon_min"], PRECIP_DOMAIN["lon_max"])})
     ds = ds.sortby(lat_name, ascending=False)
     tp = ds[config.precip_var].squeeze().values.astype(np.float32) * config.precip_unit_scale
     return np.clip(tp, 0, None)
@@ -983,6 +1015,7 @@ def compute_fss_for_config(config, mode, season=None):
     all_files = sorted(Path(precip_dir).glob("*"))
     fss_store = {}
     processed = skipped = 0
+    precip_windows = None
 
     for f in all_files:
         m = regex.match(f.name)
@@ -1002,12 +1035,18 @@ def compute_fss_for_config(config, mode, season=None):
         if truth_file is None:
             skipped += 1; continue
         try:
+            obs_arr, truth_lat, truth_lon = load_precip_truth(truth_file, precip_truth)
+            if precip_windows is None:
+                grid_spacing_deg = abs(float(truth_lat[1]) - float(truth_lat[0]))
+                precip_windows = get_precip_windows_for_resolution(grid_spacing_deg)
+                print(f"  Truth grid spacing: {grid_spacing_deg:.4f} deg -> precip windows (gridpoints): {precip_windows}")
             fc_arr = load_precip_forecast(f, config)
-            obs_arr = load_precip_truth(truth_file, precip_truth)
+            if fc_arr.shape != obs_arr.shape:
+                fc_arr = load_precip_forecast(f, config, target_lat=truth_lat, target_lon=truth_lon)
             if fc_arr.shape != obs_arr.shape:
                 skipped += 1; continue
             for thr in PRECIP_THRESHOLDS:
-                for win in PRECIP_WINDOWS:
+                for win in precip_windows:
                     fss_val = float(fss_2d_single_field(fcst=fc_arr, obs=obs_arr,
                                                          event_threshold=thr, window_size=(win, win)))
                     fss_store.setdefault((lead, thr, win), []).append(fss_val)
@@ -1259,7 +1298,7 @@ def plot_dynamic(model_keys, add_configs, period, outname):
                     ax.add_patch(Rectangle((xl+0.08, 0.08), 0.83, 0.83, fill=False, edgecolor="blue", linewidth=1.5))
             if i == 0:
                 title = "HKE Spectrum RMSE\n(200/700/850 hPa avg)" if j == len(DYN_VARS) else \
-                         "6-hourly Acc. Precip. GPM\nFSS Score" if j == precip_row else \
+                         "6-hourly Acc. Precip.\nFSS Score" if j == precip_row else \
                          DYN_DISPLAY[DYN_VARS[j]] + " NRMSE"
                 ax.set_title(title, fontsize=9, pad=10)
             if i == n_rows - 1:
@@ -1269,7 +1308,9 @@ def plot_dynamic(model_keys, add_configs, period, outname):
             else:
                 ax.tick_params(axis="x", bottom=False, labelbottom=False)
             ax.set_yticks([]); ax.set_xlim(0, len(LEADS)); ax.set_ylim(0, 1)
-        axes[i, 0].set_ylabel(MODEL_DISPLAY.get(m, m), rotation=0, ha="right", va="center", fontsize=10, labelpad=20)
+        pl_sfc_label, precip_label = get_truth_labels(m, add_configs)
+        row_label = f"{MODEL_DISPLAY.get(m, m)}\n({pl_sfc_label} / {precip_label})"
+        axes[i, 0].set_ylabel(row_label, rotation=0, ha="right", va="center", fontsize=10, labelpad=20)
 
     legend_handles = [Patch(edgecolor="green", facecolor="none", linewidth=1.5, label="Best"),
                        Patch(edgecolor="blue", facecolor="none", linewidth=1.5, label="Second Best")]
@@ -1392,7 +1433,9 @@ def plot_combined(model_keys, add_configs, period, outname):
         else:
             ax.tick_params(axis="x", bottom=False, labelbottom=False)
         ax.set_yticks([]); ax.set_xlim(0, len(LEADS)); ax.set_ylim(0, 1)
-        ax.set_ylabel(MODEL_DISPLAY.get(m, m), rotation=0, ha="right", va="center", fontsize=10, labelpad=20)
+        pl_sfc_label, precip_label = get_truth_labels(m, add_configs)
+        row_label = f"{MODEL_DISPLAY.get(m, m)}\n({pl_sfc_label} / {precip_label})"
+        ax.set_ylabel(row_label, rotation=0, ha="right", va="center", fontsize=10, labelpad=20)
 
     legend_handles = [Patch(edgecolor="red", facecolor="none", linewidth=1.5, label="Best"),
                        Patch(edgecolor="orange", facecolor="none", linewidth=1.5, label="Second Best")]

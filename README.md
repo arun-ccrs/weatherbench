@@ -12,6 +12,15 @@ Asia domain, across three complementary benchmarks:
 - **Combined** -- unweighted mean across all Traditional + Dynamic +
   precipitation metrics, one score per model per lead time.
 
+Precipitation skill uses the Fractions Skill Score (FSS) at four
+thresholds and four window sizes. Window sizes are computed at runtime
+from your truth grid's actual resolution to represent consistent
+real-world distances (~56/139/278/556 km) regardless of native grid
+spacing, so `window_gridpts` in the FSS output is not a fixed constant
+across models -- it reflects each model's own precip truth resolution,
+and scores stay physically comparable across models even when their
+truth sources differ in resolution.
+
 Ships with precomputed results for five models: **PanguWeather,
 FourCastNet, AIFS, GraphCast, Aurora**. Supports adding your own model
 through a JSON config, computed live against your own truth data.
@@ -62,6 +71,8 @@ See `examples/` for three complete, working configs:
 | `precip_forecast_dir` | no | Override -- use a different directory for precipitation only (e.g. a separately MLP-derived precip product). Defaults to `forecast_dir` |
 | `precip_forecast_filename_template` | no | Filename pattern for `precip_forecast_dir`. Defaults to `filename_template` |
 | `needs_rh_to_q` | no | Set `true` if your forecast files contain relative humidity (`r`) instead of specific humidity (`q`) -- converted automatically via the Bolton (1980) approximation |
+| `truth_source_label` | no | Display label for your `pl_truth`/`sfc_truth` source, shown in each row's label on Dynamic/Combined figures. Default `"ERA5"` |
+| `precip_truth_source_label` | no | Display label for your `precip_truth` source, shown alongside `truth_source_label` (e.g. `"ERA5 / GPM"`). Default `"GPM"` |
 | `pl_truth` | conditional | TruthSpec for pressure-level truth (z, t, q, u, v) |
 | `sfc_truth` | conditional | TruthSpec for surface truth (u10, v10, t2m) |
 | `precip_truth` | conditional | TruthSpec for precipitation truth |
@@ -101,7 +112,11 @@ as-is in their native units.
 
     npz/                 Cached Traditional + Dynamic + Spectra results, one file per model/period
     fss/                 Cached precipitation FSS results, one file per model/period
-    figures/             Generated plots (not version-controlled)
+    figures/             Generated plots. The clean, precomputed-only full_year
+                          plots (traditional/dynamic/combined) are version-controlled
+                          as the repo's reference figures; everything else (other
+                          periods, and any figure including live-added models) is
+                          regenerated locally and not tracked
     reference_values/    Cached truth-derived normalization constants, one per distinct truth path
     spectra_reference/   Cached ERA5 per-lead spectra, one per distinct truth path
                           (built on first use -- not pre-shipped, even for our own default truth)
