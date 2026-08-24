@@ -1,10 +1,22 @@
 # Regenerated locally on first use -- never pre-shipped, even for our own default truth
 spectra_reference/
-# Regenerated output, not a shipped deliverable -- except the clean full_year precomputed-only reference figures below
+# Regenerated output, not a shipped deliverable -- except the clean precomputed-only reference figures below
 figures/*
 !figures/traditional_full_year.png
 !figures/dynamic_full_year.png
 !figures/combined_full_year.png
+!figures/traditional_12cases.png
+!figures/dynamic_12cases.png
+!figures/combined_12cases.png
+!figures/traditional_im.png
+!figures/dynamic_im.png
+!figures/combined_im.png
+!figures/traditional_sw.png
+!figures/dynamic_sw.png
+!figures/combined_sw.png
+!figures/traditional_ne.png
+!figures/dynamic_ne.png
+!figures/combined_ne.png
 # Python
 __pycache__/
 *.pyc

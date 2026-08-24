@@ -112,11 +112,11 @@ as-is in their native units.
 
     npz/                 Cached Traditional + Dynamic + Spectra results, one file per model/period
     fss/                 Cached precipitation FSS results, one file per model/period
-    figures/             Generated plots. The clean, precomputed-only full_year
-                          plots (traditional/dynamic/combined) are version-controlled
-                          as the repo's reference figures; everything else (other
-                          periods, and any figure including live-added models) is
-                          regenerated locally and not tracked
+    figures/             Generated plots. The clean, precomputed-only plots
+                          (traditional/dynamic/combined, all 5 periods) are
+                          version-controlled as the repo's reference figures;
+                          anything including a live-added model is regenerated
+                          locally and not tracked
     reference_values/    Cached truth-derived normalization constants, one per distinct truth path
     spectra_reference/   Cached ERA5 per-lead spectra, one per distinct truth path
                           (built on first use -- not pre-shipped, even for our own default truth)
