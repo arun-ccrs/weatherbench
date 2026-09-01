@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regional WeatherBench — Southeast Asia</title>
+<style>
+  :root{
+    --ink:#101826;
+    --ink-soft:#3E4A5C;
+    --paper:#F4F6F5;
+    --panel:#FFFFFF;
+    --line:#D8DEE0;
+    --teal:#0B6E7C;
+    --teal-dark:#08525D;
+    --teal-wash:#E4F0EF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  a{color:var(--teal-dark);}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+
+  header.masthead{
+    position:relative;
+    border-bottom:1px solid var(--line);
+    padding:34px 0 26px;
+    overflow:hidden;
+  }
+  header.masthead .isobars{
+    position:absolute;
+    top:-40px;
+    right:-60px;
+    width:420px;
+    height:260px;
+    z-index:0;
+    pointer-events:none;
+  }
+  header.masthead .masthead-inner{
+    position:relative;
+    z-index:1;
+  }
+  header.masthead .models{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin:0 0 18px;
+    letter-spacing:0.1px;
+  }
+  header.masthead .models b{
+    color:var(--ink);
+    font-weight:600;
+  }
+  header.masthead .kicker{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin:0 0 6px;
+  }
+  header.masthead h1{
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-weight:600;
+    font-size:34px;
+    letter-spacing:0.2px;
+    margin:0 0 10px;
+    max-width:600px;
+  }
+  @media (max-width:820px){
+    header.masthead .isobars{display:none;}
+  }
+  header.masthead p.sub{
+    max-width:640px;
+    color:var(--ink-soft);
+    font-size:15.5px;
+    margin:0 0 18px;
+  }
+  header.masthead .links{
+    display:flex;
+    font-size:14px;
+  }
+  header.masthead .links a{
+    text-decoration:none;
+    border-bottom:1px solid transparent;
+    margin-right:22px;
+  }
+  header.masthead .links a:hover{border-bottom-color:var(--teal-dark);}
+
+  .controls{padding:26px 0 6px;}
+  .control-group{margin-bottom:18px;}
+  .control-group .label{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 9px;
+  }
+  .pillrow{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  button.pill{
+    font-family:inherit;
+    font-size:14.5px;
+    color:var(--ink);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:9px 16px;
+    cursor:pointer;
+    transition:border-color 120ms ease, background 120ms ease, color 120ms ease;
+  }
+  button.pill:hover{border-color:var(--teal);}
+  button.pill:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+  button.pill[aria-pressed="true"]{
+    background:var(--teal-dark);
+    border-color:var(--teal-dark);
+    color:#fff;
+  }
+  button.pill .meta{
+    display:block;
+    font-size:11.5px;
+    opacity:0.72;
+    margin-top:2px;
+  }
+
+  .stage{padding:22px 0 14px;}
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:22px;
+  }
+  .panel .panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .panel .figure-title{
+    font-size:15px;
+    font-weight:600;
+    margin:0 0 3px;
+  }
+  .panel .figure-sub{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+  .panel .fullsize-link{
+    font-size:13px;
+    white-space:nowrap;
+    text-decoration:none;
+    color:var(--teal-dark);
+    border-bottom:1px solid transparent;
+  }
+  .panel .fullsize-link:hover{border-bottom-color:var(--teal-dark);}
+  .imgbox{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:220px;
+    background:var(--teal-wash);
+    border-radius:7px;
+    overflow:auto;
+    padding:14px;
+  }
+  .imgbox img{
+    max-width:100%;
+    height:auto;
+    display:block;
+  }
+  .imgbox .missing{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:14px;
+    padding:40px 20px;
+  }
+  .caption{
+    margin-top:16px;
+    padding-top:16px;
+    border-top:1px solid var(--line);
+    font-size:13.5px;
+    color:var(--ink-soft);
+  }
+  .caption .legend{
+    margin-top:8px;
+    font-size:12.5px;
+  }
+  .legend .best.green{color:#1F7A3D;font-weight:600;}
+  .legend .second.blue{color:#1D5FA8;font-weight:600;}
+  .legend .best.red{color:#B3261E;font-weight:600;}
+  .legend .second.orange{color:#B36A0E;font-weight:600;}
+
+  footer{
+    padding:30px 0 50px;
+    color:var(--ink-soft);
+    font-size:12.5px;
+  }
+
+  @media (max-width:640px){
+    header.masthead h1{font-size:27px;}
+    .panel{padding:14px;}
+    button.pill{padding:8px 12px;font-size:13.5px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <svg class="isobars" viewBox="0 0 420 260" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <g fill="none" stroke="#0B6E7C" stroke-width="1.1">
+        <path d="M300,40 C360,55 390,100 380,150 C372,192 330,222 285,225 C235,228 195,205 182,165 C170,128 190,85 232,60 C260,44 280,36 300,40 Z" opacity="0.16"/>
+        <path d="M300,62 C348,75 370,110 362,148 C355,180 322,203 286,205 C247,207 217,189 207,158 C198,130 213,98 246,78 C267,66 284,59 300,62 Z" opacity="0.22"/>
+        <path d="M298,84 C333,95 349,120 343,148 C337,172 313,189 286,190 C258,191 236,178 228,155 C221,135 233,111 257,96 C272,87 285,82 298,84 Z" opacity="0.30"/>
+        <path d="M296,106 C317,113 327,129 323,147 C319,163 304,174 286,175 C267,176 254,167 249,152 C244,138 251,122 266,113 C275,108 285,104 296,106 Z" opacity="0.40"/>
+        <circle cx="286" cy="143" r="3" fill="#0B6E7C" opacity="0.45"/>
+      </g>
+    </svg>
+    <div class="masthead-inner">
+      <p class="kicker">Centre for Climate Research Singapore &middot; Meteorological Service Singapore</p>
+      <h1>Regional WeatherBench — Southeast Asia</h1>
+      <p class="sub">Five AI weather models, evaluated against ERA5 and GPM over Southeast Asia. Pick a benchmark and a period below to view the corresponding figure.</p>
+      <p class="models"><b>Models evaluated:</b> PanguWeather &middot; FourCastNet &middot; AIFS &middot; GraphCast &middot; Aurora</p>
+      <nav class="links">
+        <a href="https://github.com/AWJ321/weatherbench" target="_blank" rel="noopener">Repository on GitHub</a>
+        <a href="https://github.com/AWJ321/weatherbench#readme" target="_blank" rel="noopener">Documentation</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="controls">
+    <div class="control-group">
+      <p class="label">Benchmark</p>
+      <div class="pillrow" id="mode-row"></div>
+    </div>
+    <div class="control-group">
+      <p class="label">Period</p>
+      <div class="pillrow" id="period-row"></div>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="figure-title" id="figure-title"></p>
+          <p class="figure-sub" id="figure-sub"></p>
+        </div>
+        <a class="fullsize-link" id="fullsize-link" target="_blank" rel="noopener">Open full-size image</a>
+      </div>
+      <div class="imgbox" id="imgbox">
+        <img id="figure-img" alt="">
+      </div>
+      <div class="caption">
+        <span id="figure-caption"></span>
+        <div class="legend" id="figure-legend"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Southeast Asia domain, 6-hourly initializations, lead times of 12–48 hours. Truth: ERA5 reanalysis (Traditional and Dynamic) and NASA GPM (precipitation). Figures are generated by <code>weatherbench.py</code> and version-controlled in <code>figures/</code> — see the repository README for full methodology, or to add your own model.
+  </footer>
+</div>
+
+<script>
+  const MODES = [
+    {
+      key: "traditional",
+      label: "Traditional",
+      description: "Elementwise NRMSE of geopotential, temperature, specific humidity, and wind vector against ERA5.",
+      legend: "green-blue"
+    },
+    {
+      key: "dynamic",
+      label: "Dynamic",
+      description: "Derived-variable diagnostics (MSE convergence/divergence, vorticity convergence, surface temperature energy convergence), per-lead kinetic energy spectrum RMSE, and GPM-based precipitation skill — testing whether each model's fields are physically coherent, not just individually accurate.",
+      legend: "green-blue"
+    },
+    {
+      key: "combined",
+      label: "Combined",
+      description: "Unweighted mean across every Traditional and Dynamic metric plus precipitation skill — one overall score per model, per lead time.",
+      legend: "red-orange"
+    }
+  ];
+
+  const PERIODS = [
+    { key: "full_year", label: "Full Year", meta: "2024" },
+    { key: "12cases",   label: "12 High-Impact Cases", meta: "extreme events" },
+    { key: "im",        label: "Inter-Monsoon", meta: "Apr–May, Oct–Nov" },
+    { key: "sw",        label: "Southwest Monsoon", meta: "Jun–Sep" },
+    { key: "ne",        label: "Northeast Monsoon", meta: "Dec–Mar" }
+  ];
+
+  let state = { mode: "traditional", period: "full_year" };
+
+  function buildPillRow(container, items, activeKey, onPick){
+    container.innerHTML = "";
+    items.forEach(item => {
+      const btn = document.createElement("button");
+      btn.className = "pill";
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", item.key === activeKey ? "true" : "false");
+      btn.innerHTML = item.label + (item.meta ? '<span class="meta">' + item.meta + '</span>' : "");
+      btn.addEventListener("click", () => onPick(item.key));
+      container.appendChild(btn);
+    });
+  }
+
+  function render(){
+    buildPillRow(document.getElementById("mode-row"), MODES, state.mode, key => {
+      state.mode = key; render();
+    });
+    buildPillRow(document.getElementById("period-row"), PERIODS, state.period, key => {
+      state.period = key; render();
+    });
+
+    const mode = MODES.find(m => m.key === state.mode);
+    const period = PERIODS.find(p => p.key === state.period);
+    const src = "figures/" + state.mode + "_" + state.period + ".png";
+
+    document.getElementById("figure-title").textContent = mode.label + " Regional WeatherBench";
+    document.getElementById("figure-sub").textContent = period.label + (period.meta ? " (" + period.meta + ")" : "");
+    document.getElementById("figure-caption").textContent = mode.description;
+
+    const legendEl = document.getElementById("figure-legend");
+    if (mode.legend === "green-blue") {
+      legendEl.innerHTML = '<span class="best green">Green</span> = best &nbsp;&middot;&nbsp; <span class="second blue">Blue</span> = second best';
+    } else if (mode.legend === "red-orange") {
+      legendEl.innerHTML = '<span class="best red">Red</span> = best &nbsp;&middot;&nbsp; <span class="second orange">Orange</span> = second best';
+    } else {
+      legendEl.innerHTML = "";
+    }
+
+    document.getElementById("fullsize-link").href = src;
+
+    const img = document.getElementById("figure-img");
+    const imgbox = document.getElementById("imgbox");
+    img.style.display = "block";
+    img.src = src;
+    img.alt = mode.label + " WeatherBench, " + period.label;
+    img.onerror = function(){
+      imgbox.innerHTML = '<div class="missing">Figure not available for this combination yet.<br>Expected at <code>' + src + '</code></div>';
+    };
+    if (!imgbox.contains(img)) {
+      imgbox.innerHTML = "";
+      imgbox.appendChild(img);
+    }
+  }
+
+  render();
+</script>
+
+</body>
+</html>
